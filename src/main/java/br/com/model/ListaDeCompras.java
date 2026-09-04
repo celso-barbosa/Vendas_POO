@@ -1,0 +1,91 @@
+package br.com.model;
+
+import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class ListaDeCompras {
+
+    private List<Produto> produtos;
+
+    public ListaDeCompras(){
+        produtos = new ArrayList<>();
+    }
+
+    public void adicionarProduto(Produto produto){
+        produtos.add(produto);
+    }
+
+    public void removerProduto(String nome){
+        produtos.removeIf(p -> p.getNome().equalsIgnoreCase(nome));
+    }
+
+    public void salvarArquivoTexto(String nomeArquivo){
+        if(!produtos.isEmpty()){
+            try(BufferedWriter writer = new BufferedWriter(new FileWriter(nomeArquivo, true))) {
+                for(Produto produto : produtos){
+                    writer.write(produto.getNome() + " - " + produto.getQuantidade() + " - " + produto.getPreco());
+                    writer.newLine();
+                }
+            } catch (IOException e) {
+                System.out.println("Erro ao salvar arquivo de texto! " + e.getMessage());
+            }
+        }else{
+            System.out.println("A lista de compras está vazia.");
+        }
+    }
+
+    public void carregarDeArquivoTexto(String nomeArquivo)  {
+        produtos.clear();
+        try (BufferedReader reader = new BufferedReader(new FileReader(nomeArquivo))) {
+            String linha;
+            while ((linha = reader.readLine()) != null) {
+                String[] partes = linha.split(" - ");
+                produtos.add(new Produto(partes[0], Integer.parseInt(partes[1]), Double.parseDouble(partes[2])));
+            }
+            System.out.println("Lista do Arquivo de Texto");
+            System.out.println(this.toString());
+
+        } catch (IOException e) {
+            System.out.println("Erro ao carregar o arquivo: "+e.getMessage());
+        }
+    }
+
+    public void salvarEmArquivoBinario(String nomeArquivo) {
+        if(!produtos.isEmpty()){
+            try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(nomeArquivo))) {
+                oos.writeObject(produtos);
+            } catch (IOException e) {
+                System.out.println("Erro ao salvar o arquivo: "+e.getMessage());
+            }
+        }else{
+            System.out.println("Lista vazia!");
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public void carregarDeArquivoBinario(String nomeArquivo) {
+        produtos.clear();
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(nomeArquivo))) {
+            produtos = (List<Produto>) ois.readObject();
+        } catch (ClassNotFoundException | IOException e){
+            System.out.println("Erro ao salvar o arquivo: "+e.getMessage());
+        }
+    }
+
+    @Override
+    public String toString() {
+       if(produtos.isEmpty()){
+           return "Lista de compras vazia.";
+       }
+
+       StringBuilder sb = new StringBuilder();
+       sb.append("------- Lista de Compras -------\n");
+
+       for(int i = 0; i < produtos.size(); i++){
+           sb.append((i+1)).append(". ").append(produtos.get(i).toString()).append("\n");
+
+       }
+       return sb.toString();
+    }
+}
