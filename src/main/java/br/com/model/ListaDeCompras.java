@@ -1,15 +1,43 @@
 package br.com.model;
 
-import java.io.*;
+import com.fasterxml.jackson.databind.ObjectMapper;import com.fasterxml.jackson.databind.SerializationFeature;import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ListaDeCompras {
 
+    private static ListaDeCompras instancia;
     private List<Produto> produtos;
+    private PersistenciaStrategy estrategiaPersistencia;
 
     public ListaDeCompras(){
         produtos = new ArrayList<>();
+    }
+
+    public static ListaDeCompras getInstancia() {
+        if (instancia == null) {
+            instancia = new ListaDeCompras();
+        }
+        return instancia;
+    }
+
+    public void setEstrategiaPersistencia(PersistenciaStrategy estrategia) {
+        this.estrategiaPersistencia = estrategia;
+    }
+
+    public void salvar(String nomeArquivo)  {
+        estrategiaPersistencia.salvar(produtos, nomeArquivo);
+    }
+
+    public void carregar(String nomeArquivo) {
+        if(!Files.exists(Paths.get(nomeArquivo)))
+            System.out.println("Arquivo não encontrado!");
+        else
+            produtos = estrategiaPersistencia.carregar(nomeArquivo);
     }
 
     public void adicionarProduto(Produto produto){
@@ -69,6 +97,51 @@ public class ListaDeCompras {
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(nomeArquivo))) {
             produtos = (List<Produto>) ois.readObject();
         } catch (ClassNotFoundException | IOException e){
+            System.out.println("Erro ao salvar o arquivo: "+e.getMessage());
+        }
+    }
+
+    public void salvarEmArquivoJson(String nomeArquivo) {
+        if(!produtos.isEmpty()){
+            try  {
+                ObjectMapper objectMapper = new ObjectMapper();
+                objectMapper.enable(SerializationFeature.INDENT_OUTPUT); // Formata o JSON para ser legível
+                objectMapper.writeValue(new File(nomeArquivo), produtos);
+            } catch (IOException e) {
+                System.out.println("Erro ao salvar o arquivo: "+e.getMessage());
+            }
+        }else{
+            System.out.println("Lista vazia!");
+        }
+
+    }
+
+    public List<Produto> filtrarPorQuantidadeMinima(int quantidadeMinima) {
+        return produtos.stream()
+                .filter(p -> p.getQuantidade() >= quantidadeMinima)
+                .collect(Collectors.toList());
+    }
+
+    // Calcula o valor total da lista usando streams
+    public double calcularValorTotal() {
+        return produtos.stream()
+                .mapToDouble(p -> p.getQuantidade() * p.getPreco())
+                .sum();
+    }
+
+    // Imprime a lista de produtos em ordem alfabética
+    public void imprimirLista() {
+        produtos.stream()
+                .sorted(Comparator.comparing(p -> p.getNome().toLowerCase())) // Ordena por nome
+                .forEach(nome -> System.out.println(nome));
+    }
+
+    public void carregarDeArquivoJson(String nomeArquivo)  {
+        produtos.clear();
+        try  {
+            ObjectMapper objectMapper = new ObjectMapper();
+            produtos = objectMapper.readValue(new File(nomeArquivo), objectMapper.getTypeFactory().constructCollectionType(List.class, Produto.class));
+        } catch (IOException e){
             System.out.println("Erro ao salvar o arquivo: "+e.getMessage());
         }
     }
